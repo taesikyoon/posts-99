@@ -4,6 +4,7 @@ const express = require("express");
 const connect = require("./schemas");
 const app = express();
 const PORT = 3000;
+const cors = require("cors");
 
 connect();
 
@@ -17,6 +18,7 @@ const requestMiddleware = (req, res, next) => {
 // ==============================================================
 // ==                        미들웨어                           ==
 // ==============================================================
+app.use(cors());
 app.use(express.json());
 app.use(requestMiddleware);
 app.use("/posts", postsRouter);
