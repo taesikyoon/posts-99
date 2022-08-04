@@ -1,58 +1,64 @@
+"use strict";
 const express = require("express");
 const router = express.Router();
-// const Post = require("./schemas/post");
-const Comment = require("../schemas/comment");
+const { Comment } = require("../models");
+
+const aushMiddleware = require("../middlewares/authorization");
+
 // ==============================================================
 // ==                    댓글   Start                          ==
 // ==============================================================
 
 // 댓글 목록 조회
-router.get("/comments/:postId", async (req, res) => {
+router.get("/:postId", async (req, res) => {
   const { postId } = req.params;
-  const data = await Comment.find(postId.postId, { __v: 0, postId: 0 });
+  const data = await Comment.findAll({
+    where: { postId },
+  });
 
   res.json({ data });
 });
 
+router.use(aushMiddleware);
 // 댓글 생성
-router.post("/comments/:_id", async (req, res) => {
-  const { user, password, comment } = req.body;
-  const { _id } = req.params;
-  const today = new Date();
+router.post("/:postId", async (req, res) => {
+  const { comment } = req.body;
+  let postId = req.params.postId;
+  postId = Number(postId);
+
   const craetecomment = await Comment.create({
-    user,
-    password,
     comment,
-    date: today.toLocaleString(),
-    postId: _id,
+    postId: postId,
+    userId: res.locals.userId,
+    nickname: res.locals.nickname,
   });
-  res.send(craetecomment);
+  res.json({ message: "댓글 생성했습니다.." });
 });
 
 // 댓글 수정
-router.put("/comments/:_id", async (req, res) => {
-  const { _id } = req.params;
-  const { comment, password } = req.body;
-  const existsComments = await Comment.findById(_id);
-  if (existsComments === null) return res.send("없는 댓글입니다.");
-  if (existsComments.length || password === existsComments.password) {
-    await Comment.updateOne({ _id }, { comment });
+router.put("/:commentId", async (req, res) => {
+  const { commentId } = req.params;
+  const { comment } = req.body;
+  const existsComments = await Comment.findAll({
+    where: { commentId },
+  });
+  if (existsComments === null) return res.send("없는 댓글은 수정이 안됨.");
+  if (existsComments) {
+    await Comment.update({ comment }, { where: { commentId } });
     res.send("댓글이 수정되었습니다.");
-  } else return res.send("비밀번호가 틀립니다.");
-  // 그러면 포스트로 사용해서 하는것이랑 무엇이 다르며
-  //  PUT은 무엇인가
+  }
 });
 
 // 댓글 삭제
-router.delete("/comments/:_id", async (req, res) => {
-  const { _id } = req.params;
+router.delete("/:commentId", async (req, res) => {
+  const { commentId } = req.params;
   const { password } = req.body;
-  const existsComments = await Comment.findById(_id);
+  const existsComments = await Comment.findByPk(commentId);
   if (existsComments === null) return res.send("없는 댓글입니다.");
-  if (existsComments.length || password === existsComments.password) {
-    await Comment.deleteOne({ _id });
-    return res.json({ result: "success" });
-  } else return res.send("비밀번호가 틀립니다. 정신차려주세요");
+  if (existsComments) {
+    await Comment.destroy({ where: { commentId } });
+    return res.json({ result: "댓글이 삭제 되었습니다." });
+  }
 });
 
 module.exports = router;
